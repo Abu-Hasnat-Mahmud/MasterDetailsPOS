@@ -1,0 +1,45 @@
+
+body{
+  margin: 0 auto;
+  padding: 0;
+  height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6{
+    font-family: 'Lobster', cursive;
+}
+
+.row {
+    margin-top: 10px; 
+}
+.nav ul li {
+    display: inline-block;
+}
+.card-stats .card-header.card-header-icon, .card-stats .card-header.card-header-text {
+    text-align: right;
+}
+.col-md-8 {
+    padding: 0 !important;
+}
+.col-md-10{
+  padding: 0 !important;
+  margin: 0 !important;
+  margin-top: 10px !important;
+}
+.lastDB{
+  margin-top: 10px !important;
+}
+.card-icon{
+  float: left;
+}
+.siteBar{
+  background-color: #343A40;
+  height: 100vh;
+
+}
+.siteBar p{
+  color: #CCCECF;
+}
+.siteBar p:hover{
+  color: #FFFFFF;
+}

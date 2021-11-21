@@ -1,0 +1,392 @@
+﻿@model IEnumerable<MasterDetailsPOS.Models.OrderMaster>
+
+@{
+    ViewBag.Title = "Index";
+}
+
+
+<h3>List of order master</h3>
+<table id="tbl" class="table table-hover">
+    <thead>
+    <tr>
+        <td style="display: none">OrderId</td>
+        <td>Customer Name</td>
+        <td>Date</td>
+        <td>Description</td>
+        <td>Actione</td>
+    </tr>
+    </thead>
+    <tbody>
+    </tbody>
+</table>
+
+<div id="myModal" class="modal fade"  role="dialog">
+    <div class="modal-dialog modal-lg">
+        <!-- Modal content-->
+        <div class="modal-content">
+            <form>
+                <div class="form-vertical">
+                    <h4>OroderMaster</h4>
+                    <hr />
+                    <div class="form-group">
+                        <div class="col-md-10">
+                            <label for="customerName">Customer Name:</label>
+                            <input id="customerName" name="customerName" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="col-md-10">
+                            <label for="orderDate">Date:</label>
+                            <input id="orderDate" name="orderDate" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="col-md-10">
+                            <label for="description">Description:</label>
+                            <input id="description" name="description" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+
+                <table id="tblModal" class="table table-striped">
+                    <thead>
+                    <tr>
+                        <td>
+                            <select name="category" id="category" class="form-control"></select>
+                        </td>
+                        <td>
+                            <select name="product" id="product" class="form-control"></select>
+                        </td>
+                        <td>
+                            <input type="text" name="rate" id="rate" placeholder="Rate" class="form-control">
+                        </td>
+                        <td>
+                            <input type="text" name="quantity" id="quantity" placeholder="Quantity" class="form-control">
+                        </td>
+                        <td>
+                            <label>Amount</label>
+                        </td>
+                        <td>
+                            <input type="button" value="Add" id="order" class="btn btn-success">
+                        </td>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <input type="submit" value="Update Order" id="masterButton" class="btn btn-danger col-lg-2" />
+                <h3 id="grandTotal">Total:</h3>
+
+                @*<div class="form-group">
+                    <div class="col-md-10">
+                        <input type="button" value="Save Order" id="masterButton" class="btn btn-default" />
+                    </div>
+                </div>*@
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="~/Scripts/jquery-3.3.1.min.js"></script>
+<script>
+    var i = 0;
+    function addLeadingZero(number, size) {
+        var s = "0000" + number;
+        return s.substr(s.length - size);
+    }
+
+    function GetAllOrderMaster() {
+        $.ajax({
+            type: "GET",
+            url: "/OrderMasterEdit/GetOrderMaster",
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            success: function (data) {
+                $.each(data, function (key, value) {
+                    var dt = new Date(parseInt(value.OrderDate.replace('/Date(', '')));
+                    var dtFinal = addLeadingZero(dt.getDate(), 2) + '/' +
+                        addLeadingZero(dt.getMonth() + 1, 2) + '/' +
+                        addLeadingZero(dt.getFullYear(), 4);
+                    $('#tbl tbody').append('<tr>'+
+                        '<td style="display: none">' + value.OrderID + '</td>' +
+                        '<td>' + value.OrderName + '</td>' +
+                        '<td>' + dtFinal + '</td>' +
+                        '<td>' + value.Description + '</td>' +
+                        '<td>' +
+                        ' <input type="button" onclick="getData(' + value.OrderID + ')"  value="View" class="btn btn-sm btn-info" data-toggle="modal" data-target="#myModal"/> ' +
+                        @*' <a href="@Url.Action("Index","Home")" class="btn btn-success">Edit &raquo;</a>' +*@
+                        '</td>' +
+                        '</tr>');
+                });
+                $('#tbl').DataTable();
+            },
+            error: function (err) {
+                alert(err);
+            }
+        });
+    }
+    $(document).ready(function () {
+
+        GetAllOrderMaster();
+        // Get Category
+        $.ajax({
+            type: "GET",
+            url: "/Home/AllCategories",
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            success: function (data) {
+                $("#category").empty();
+                $("#category").append('<option value="0"> --Select Category-- </option>');
+                $.each(data, function (key, value) {
+                    $("#category").append('<option value="' + value.CategoryID + '">' + value.CategoryName + '</option>');
+                });
+            },
+            error: function (err) {
+                alert(err);
+            }
+        });
+
+        // if category change
+        $("#category").change(function () {
+            var catId = $("#category").val();
+            if (catId !== 0) {
+                var json = { categoryId: catId };
+                $.ajax({
+                    type: "POST",
+                    url: "/Home/GetProducts",
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(json),
+                    success: function (data) {
+                        $("#product").empty();
+                        $("#product").append('<option value="0"> --Select Product-- </option>');
+                        $.each(data, function (key, value) {
+                            $("#product").append('<option value="' + value.ProductID + '">' + value.ProductName + '</option>');
+                        });
+                    },
+                    error: function (err) {
+                        alert(err);
+                    }
+                });
+            }
+        });
+
+        //when product change
+        $('#product').change(function () {
+            var proId = $('#product').val();
+            if (proId !== 0) {
+                var json = { productId: proId };
+                $.ajax({
+                    type: "POST",
+                    url: "/Home/GetProductRate",
+                    contentType: 'application/json; charset=utf=8',
+                    dataType: 'json',
+                    data: JSON.stringify(json),
+                    success: function (data) {
+                        console.log(data[0].Rate);
+                        $('#rate').val(data[0].Rate);
+                    },
+                    error: function (err) {
+                        alert(err);
+                    }
+                });
+            }
+        });
+
+        // if click order button
+        
+        $("#order").click(function () {
+            var rateId = "rateTextbox" + i;
+            var quantityId = "quantityTextBox" + i;
+            var amount = "amount" + i;
+            var productId = $("#product").val();
+            var category = $("#category option:selected").text();
+            var product = $("#product option:selected").text();
+            var rate = $("#rate").val();
+            var quantity = $("#quantity").val();
+            //total += rate * quantity;
+            if (productId === null || rate === "" || quantity === "") {
+                alert("Please choose any product");
+            } else {
+                var productItem = '<tr>' +
+                    '<td style="display:none">' + productId + '</td>' +
+                    '<td>' + category + '</td>' +
+                    '<td>' + product + '</td>' +
+                    '<td>' + '<input type="text" onkeyup="getTotal(this.id)" value=' + rate + ' id="' + rateId + '" class="form-control"/>' + '</td>' +
+                    '<td>' + '<input type="text" onkeyup="getTotal(this.id)" value=' + quantity + ' id="' + quantityId + '"  class="form-control"/>' + '</td>' +
+                    '<td id="' + amount + '">' + (rate * quantity) + '</td>' +
+                    '<td><a data-itemId="0" href="#" class="deleteItem">Remove</a></td>' +
+                    '</tr>';
+                i++;
+                $("#tblModal tbody").append(productItem);
+                clearItem();
+                GrandTotal();
+            }
+        });
+
+        $('#masterButton').click(function () {
+            check();
+            var orderName = $("#customerName").val();
+            var orderDate = $("#orderDate").val();
+            var description = $("#description").val();
+
+            if (orderName === "" && orderDate === "" && description === "") {
+                alert("Please fill up customer details");
+            } else if (row === false) {
+                alert("Please order any product");
+            } else {
+                $('#tblModal tbody tr').each(function () {
+                    var productId = $(this).find("td").eq(0).text();
+                    var rate = $(this).find("td").eq(3).find('input[type="text"]').val();
+                    var quantity = $(this).find("td").eq(4).find('input[type="text"]').val();
+                    orderList.push({ productId, rate, quantity });
+                });
+
+                var data = {
+                    OrderId:orderId,
+                    OrderName: orderName,
+                    OrderDate: orderDate,
+                    Description: description,
+                    OrderDetails: orderList
+                }
+
+                $.ajax({
+                    type: 'POST',
+                    url: '/OrderMasterEdit/UpdateOrder',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: function (data) {
+                        if (data > 0) {
+                            alert('Successfully saved');
+                            orderList = [];
+                            $('#tbl tbody').empty();
+                            GetAllOrderMaster();
+                        } else {
+                            alert('Error');
+                            orderList = [];
+                        }
+                    },
+                    error: function (error) {
+                        console.log(error);
+                    }
+                });
+            }
+        });
+
+    });
+    var orderList = [];
+    function GrandTotal() {
+        var total = 0;
+        $('#tblModal tbody tr').each(function () {
+            total += parseInt($(this).find("td").eq(5).text());
+        });
+        document.getElementById("grandTotal").innerHTML = "Total: " + total;
+    }
+    
+    function getTotal(id) {
+        var txt = id;
+        var number = txt.match(/\d+/g, "") + '';
+        var rate = document.getElementById("rateTextbox" + number).value;
+        var quantity = document.getElementById("quantityTextBox" + number).value;
+        document.getElementById("amount" + number).innerHTML = (rate * quantity);
+        GrandTotal();
+    }
+
+    function clearItem() {
+        $("#category").val(0);
+        $("#product").val(0);
+        $("#rate").val('');
+        $("#quantity").val('');
+    }
+
+    function getTotal(id) {
+        var txt = id;
+        var number = txt.match(/\d+/g, "") + '';
+        var rate = document.getElementById("rateTextbox" + number).value;
+        var quantity = document.getElementById("quantityTextBox" + number).value;
+        document.getElementById("amount" + number).innerHTML = (rate * quantity);
+        GrandTotal();
+    }
+
+    var row;
+    function check() {
+        row = false;
+        $('#tblModal tbody tr').each(function () {
+            row = true;
+        });
+    }
+
+    var orderId = 0;
+    function getData(idd) {
+        var json = { orderId: idd };
+        orderId = idd;
+        $.ajax({
+            type: "GET",
+            url: "/OrderMasterEdit/GetOrderMaster",
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            data: {id:idd},
+            success: function (data) {
+                $.each(data, function (key, value) {
+                    var dt = new Date(parseInt(value.OrderDate.replace('/Date(', '')));
+                    var dtFinal = addLeadingZero(dt.getDate(), 2) + '/' +
+                        addLeadingZero(dt.getMonth() + 1, 2) + '/' +
+                        addLeadingZero(dt.getFullYear(), 4);
+                    $('#customerName').val(value.OrderName);
+                    $('#orderDate').val(dtFinal);
+                    $('#description').val(value.Description);
+                });
+            },
+            error: function (err) {
+                alert(err);
+            }
+        });
+
+        $.ajax({
+            type: "POST",
+            url: "/OrderMasterEdit/GetOrderDetails",
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            data: JSON.stringify(json),
+            success: function (data) {
+                $("#tblModal tbody").empty();
+                $.each(data, function (key, value) {
+                    //var amount = (value.Rate * value.Quantity);
+                    var rateId = "rateTextbox" + i;
+                    var quantityId = "quantityTextBox" + i;
+                    var amount = "amount" + i;
+                    $("#tblModal tbody").append('<tr>' +
+                        '<td style="display:none">' + value.OrderID + '</td>' +
+                        '<td>'+value.CategoryName+'</td>'+
+                        '<td>'+value.ProductName+'</td>'+
+                        '<td>' + '<input type="text" onkeyup="getTotal(this.id)" id="' + rateId + '" value=' + value.Rate + ' class="form-control"/>' + '</td>' +
+                        '<td>' + '<input type="text" onkeyup="getTotal(this.id)" id="' + quantityId + '" value=' + value.Quantity + ' class="form-control"/>' + '</td>' +
+                        '<td id="' + amount + '">' + (value.Rate * value.Quantity) + '</td>' +
+                        '<td><a data-itemId="0" href="#" class="deleteItem">Remove</a></td>' +
+                        '</tr>');
+                    i++;
+                    GrandTotal();
+                });
+            },
+            error: function (err) {
+                alert(err);
+            }
+        });
+
+        GrandTotal();
+    }
+
+    //----- Delete order---------
+
+    $(document).on('click', 'a.deleteItem', function (e) {
+        e.preventDefault();
+        var $self = $(this);
+        if ($(this).attr('data-itemId') === "0") {
+            $(this).parents('tr').remove();
+            GrandTotal();
+        }
+    });
+
+
+</script>

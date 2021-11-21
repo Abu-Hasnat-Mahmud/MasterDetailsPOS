@@ -1,0 +1,270 @@
+﻿@using MasterDetailsPOS.Models;
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>Master details entry form</h2>
+@Html.AntiForgeryToken()
+<form>
+    <div class="form-horizontal">
+        <h4>OroderMaster</h4>
+        <hr />
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+        <div class="form-group">
+            <div class="col-md-10">
+                <label for="customerName">Customer Name:</label>
+                <input id="customerName" name="customerName" class="form-control"/>
+            </div>
+        </div>
+        ss
+        <div class="form-group">
+            <div class="col-md-10">
+                <label for="orderDate">Date:</label>
+                <input id="orderDate" name="orderDate" class="form-control"/>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="col-md-10">
+                <label for="description">Description:</label>
+                <input id="description" name="description" class="form-control"/>
+            </div>
+        </div>
+    </div>
+
+    <table id="tbl" class="table table-striped">
+        <thead>
+        <tr>
+            <td>
+                <select name="category" id="category" class="form-control"></select>
+            </td>
+            <td>
+                <select name="product" id="product" class="form-control"></select>
+            </td>
+            <td>
+                <input type="text" name="rate" id="rate" placeholder="Rate" class="form-control">
+            </td>
+            <td>
+                <input type="text" name="quantity" id="quantity" placeholder="Quantity" class="form-control">
+            </td>
+            <td>
+                <input type="button" value="Add" id="order" class="btn btn-success">
+            </td>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    <h3 id="grandTotal">Total:</h3>
+    
+
+    <div class="form-group">
+        <div class="col-md-10">
+            <input type="button" value="Save Order" id="masterButton" class="btn btn-default" />
+        </div>
+    </div>
+   
+</form>
+
+
+<script src="~/Scripts/jquery-3.3.1.min.js"></script>
+
+<script>
+    var orderList = [];
+    
+    $(document).ready(function () {
+        $.ajax({
+            type: "GET",
+            url: "/Home/AllCategories",
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            success: function (data) {
+                $("#category").empty();
+                $("#category").append('<option value="0"> --Select Category-- </option>');
+                $.each(data, function (key, value) {
+                    $("#category").append('<option value="' + value.CategoryID + '">' + value.CategoryName + '</option>');
+                });
+            },
+            error: function (err) {
+                alert(err);
+            }
+        });
+
+
+        $("#category").change(function () {
+            var catId = $("#category").val();
+            if (catId !== 0) {
+                var json = { categoryId: catId };
+                $.ajax({
+                    type: "POST",
+                    url: "/Home/GetProducts",
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(json),
+                    success: function (data) {
+                        $("#product").empty();
+                        $("#product").append('<option value="0"> --Select Product-- </option>');
+                        $.each(data, function (key, value) {
+                            $("#product").append('<option value="' + value.ProductID + '">' + value.ProductName + '</option>');
+                        });
+                    },
+                    error: function (err) {
+                        alert(err);
+                    }
+                });
+            }
+        });
+
+        $('#product').change(function() {
+            var proId = $('#product').val();
+            if (proId!==0) {
+                var json = { productId: proId };
+                $.ajax({
+                    type: "POST",
+                    url: "/Home/GetProductRate",
+                    contentType: 'application/json; charset=utf=8',
+                    dataType: 'json',
+                    data: JSON.stringify(json),
+                    success: function(data) {
+                        console.log(data[0].Rate);
+                        $('#rate').val(data[0].Rate);
+                    },
+                    error: function(err) {
+                        alert(err);
+                    }
+                });
+            }
+        });
+
+        // add button
+
+        var i = 0;
+        $("#order").click(function () {
+            var rateId = "rateTextbox"+i;
+            var quantityId = "quantityTextBox" + i;
+            var amount = "amount" + i;
+            var productId = $("#product").val();
+            var category = $("#category option:selected").text();
+            var product = $("#product option:selected").text();
+            var rate = $("#rate").val();
+            var quantity = $("#quantity").val();
+            //total += rate * quantity;
+            if (productId===null || rate==="" || quantity===""){
+                alert("Please choose any product");
+            } else {
+                var productItem = '<tr>' +
+                '<td style="display:none">' + productId + '</td>' +
+                '<td>' + category + '</td>' +
+                '<td>' + product + '</td>' +
+                '<td>' + '<input type="text" onkeyup="getTotal(this.id)" value=' + rate + ' id="' + rateId + '" class="form-control"/>' + '</td>' +
+                '<td>' + '<input type="text" onkeyup="getTotal(this.id)" value=' + quantity + ' id="' + quantityId + '"  class="form-control"/>' + '</td>' +
+                '<td id="' + amount + '">' + (rate * quantity) + '</td>' +
+                '<td><a data-itemId="0" href="#" class="deleteItem">Remove</a></td>' +
+                '</tr>';
+                i++;
+                $("#tbl tbody").append(productItem);
+                clearItem();
+                GrandTotal();
+            }
+        });
+    });
+
+    // -----all functio are declare here
+
+    function clearItem() {
+        $("#category").val(0);
+        $("#product").val(0);
+        $("#rate").val('');
+        $("#quantity").val('');
+    }
+
+    //Table cell edits
+
+    function getTotal(id) {
+        var txt = id;
+        var number = txt.match(/\d+/g, "") + '';
+        var rate = document.getElementById("rateTextbox" + number).value;
+        var quantity = document.getElementById("quantityTextBox" + number).value;
+        document.getElementById("amount" + number).innerHTML = (rate * quantity);
+        GrandTotal();
+    }
+
+    function GrandTotal() {
+        var total = 0;
+        $('#tbl tbody tr').each(function () {
+            total += parseInt($(this).find("td").eq(5).text());
+        });
+        document.getElementById("grandTotal").innerHTML = "Total: "+total;
+    }
+
+    var row;
+    function check() {
+        row = false;
+        $('#tbl tbody tr').each(function () {
+            row = true;
+        });
+    }
+    // Send Master order view from controller
+    $("#masterButton").click(function () {
+        check();
+        var orderName = $("#customerName").val();
+        var orderDate = $("#orderDate").val();
+        var description = $("#description").val();
+
+        if (orderName==="" && orderDate==="" && description==="") {
+            alert("Please fill up customer details");
+        } else if (row===false) {
+            alert("Please order any product");
+        } else {
+            $('#tbl tbody tr').each(function () {
+                    var productId = $(this).find("td").eq(0).text();
+                    var rate = $(this).find("td").eq(3).find('input[type="text"]').val();
+                    var quantity = $(this).find("td").eq(4).find('input[type="text"]').val();
+                    orderList.push({ productId, rate, quantity });
+            });
+
+            var data = {
+                OrderName: orderName,
+                OrderDate: orderDate,
+                Description: description,
+                OrderDetails: orderList
+            }
+
+            $.ajax({
+                type: 'POST',
+                url: '/Home/Save',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function (data) {
+                    if (data > 0) {
+                        alert('Successfully saved');
+                        orderList = [];
+                        $('#orderName').val('');
+                        $('#orderDate').val('');
+                        $('#description').val('');
+                        $('#tbl tbody').empty();
+                        $('#grandTotal').html("");
+                    }else {
+                        alert('Error');
+                        orderList = [];
+                    }
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            });
+        }
+    });
+
+    //----- Delete order---------
+
+    $(document).on('click', 'a.deleteItem', function (e) {
+        e.preventDefault();
+        var $self = $(this);
+        if ($(this).attr('data-itemId') === "0") {
+            $(this).parents('tr').remove();
+            GrandTotal();
+        }
+    });
+</script>
+

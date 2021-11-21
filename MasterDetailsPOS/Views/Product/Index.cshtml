@@ -1,0 +1,258 @@
+﻿@using MasterDetailsPOS.Models;
+
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>Index</h2>
+
+@using (Html.BeginForm()) 
+{
+    @Html.AntiForgeryToken()
+
+    <div class="form-horizontal">
+        <h4>Product</h4>
+        <hr/>
+
+        <div class="form-group">
+            <label class="control-label col-md-2">Categroy</label>
+            <div class="col-md-10">
+                <select id="category" class="form-control">
+                    <option> --Select Category--</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="control-label col-md-2"> Product Name</label>
+            <div class="col-md-10">
+                <input type="text" id="productName" class="form-control"/>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="control-label col-md-2"> Rate </label>
+            <div class="col-md-10">
+                <input type="text" id="rate" class="form-control" />
+            </div>
+        </div>
+
+
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="button" id="btn" value="Save" class="btn btn-default"/>
+            </div>
+        </div>
+    </div>
+
+    <div class="control-label">
+        <h2>All Products</h2>
+        <table class="table table-hover" id="tbl">
+            <thead>
+            <tr>
+                <th>SL No.</th>
+                <th>Category</th>
+                <th>Product</th>
+                <th>Rate</th>
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="modal fade" id="myModal" role="dialog">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Update product</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <input style="display: none" type="text" id="productIdNew" class="form-control"/>
+                        <label for="productNameNew">Product Name:</label>
+                        <input type="text" class="form-control" id="productNameNew">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="rateNew">Rate:</label>
+                        <input type="text" class="form-control" id="rateNew">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="btnUpdate" class="btn btn-success" data-dismiss="modal">Update</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
+<script src="~/Scripts/jquery-3.3.1.min.js"></script>
+<script src="~/Scripts/DataTables/jquery.dataTables.min.js"></script>
+
+<script>
+    
+    //  Get All products
+
+    function getAllProducts() {
+
+        var catId = $('#category').val();
+        if (catId !== 0) {
+            var data = {
+                categoryId: catId
+            }
+            $.ajax({
+                type: "GET",
+                url: "/Product/GetAllProducts",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: data,
+                success: function (data) {
+                    $('#tbl tbody').empty();
+                    $.each(data, function (key, value) {
+                        $('#tbl').append('<tr>' +
+                            '<td>' + (key + 1) + '</td>' +
+                            '<td>' + value.CategoryName + '</td>' +
+                            '<td>' + value.ProductName + '</td>' +
+                            '<td>' + value.Rate + '</td>' +
+                            '<td> <input type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal" value="Edit" onclick=editPro("' + value.ProductName + '",' + value.ProductID + ',' + value.Rate + ')> ' +
+                            '<input type="button" class="btn btn-danger" value="Delete" onclick=deletePro(' + value.ProductID + ')> </td>' +
+                            '<tr>');
+                    });
+                    $('#tbl').DataTable();
+                },
+                error: function (err) {
+                    alert(err);
+                }
+            });
+        }
+    }
+
+    // Save Button Click
+    $('#btn').on('click', function () {
+        var categoryId = $('#category option:selected').val();
+        var productName = $('#productName').val();
+        var rate = $('rate').val();
+        if (categoryId === '0' || productName === '') {
+            alert("Select category and type product name");
+        } else {
+            var data = {
+                CategoryID: categoryId,
+                ProductName: productName,
+                Rate:rate
+            }
+            $.ajax({
+                type: 'POST',
+                url: '/Product/SaveProduct',
+                data: JSON.stringify(data),
+                contentType: 'application/json',
+                success: function (data) {
+                    if (data > 0) {
+                        alert('Save successfull');
+                        $('#category').val('0');
+                        $('#productName').val('');
+                        $('#rate').val('');
+                        $('#tbl tbody').empty();
+                        getAllProducts();
+                    } else {
+                        alert('Product alraedy exist');
+                    }
+                },
+                error: function (error) {
+                    alert(error);
+                }
+            });
+        }
+
+    });
+
+    function editPro(pName, pId,pRate) {
+        $('#productNameNew').val(pName);
+        $('#productIdNew').val(pId);
+        $('#rateNew').val(pRate);
+    }
+
+    function deletePro(id) {
+        $.ajax({
+            type: "GET",
+            url: "/Product/DeleteProduct",
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            data: { productId: id },
+            success: function (data) {
+                if (data > 0) {
+                    $('#tbl tbody').empty();
+                    getAllProducts();
+                } else {
+                    alert('sorry');
+                }
+            },
+            error: function (error) {
+                alert(error);
+            }
+        });
+    }
+    
+    $(document).ready(function () {
+        // -- Get All Categories in Dropdown
+        $.ajax({
+            type: "GET",
+            url: "/Category/GetAllCategory",
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            success: function (data) {
+                $("#category").empty();
+                $("#category").append('<option value="0"> --Select Category-- </option>');
+                $.each(data, function (key, value) {
+                    $("#category").append('<option value="' + value.CategoryID + '">' + value.CategoryName + '</option>');
+                });
+            },
+            error: function (err) {
+                alert(err);
+            }
+        });
+
+        getAllProducts();
+    });
+
+    $('#category').change(function () {
+        getAllProducts();
+    });
+
+    $('#btnUpdate').click(function () {
+        var proId = $('#productIdNew').val();
+        var proName = $('#productNameNew').val();
+        var proRate = $('#rateNew').val();
+        var data = {
+            ProductID: proId,
+            ProductName: proName,
+            Rate:proRate
+        };
+        $.ajax({
+            type: 'POST',
+            url: '/Product/UpdateProduct',
+            data: JSON.stringify(data),
+            contentType: 'application/json',
+            success: function (data) {
+                if (data > 0) {
+                    $('#tbl tbody').empty();
+                    getAllProducts();
+                } else {
+                    alert('Product is not updated');
+                }
+            },
+            error: function (error) {
+                alert(error);
+            }
+        });
+    });
+
+</script>
+
+<div>
+    @Html.ActionLink("Back to List", "Index")
+</div>

@@ -1,0 +1,166 @@
+﻿@model MasterDetailsPOS.Models.Category
+@using MasterDetailsPOS.Models;
+
+@{
+    Layout = "../shared/_Layout.cshtml";
+}
+
+
+
+
+@using (Html.BeginForm()) 
+{
+    @Html.AntiForgeryToken()
+    <div class="row">
+        <div class="col-md-6 mt-lg-5">
+            <div class="form-horizontal float-left">
+
+                <div class="form-group ">
+                    <div class="col-md-8">
+                        <input type="text" name="category" id="category" value="" placeholder="category" class="form-control" required=""/>
+                    </div>
+                </div>
+
+                <div class="form-group ">
+                    <div class="col-md-10">
+                        <input type="button" value="Save" id="btn" class="btn btn-default"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+            <div class="col-md-6 float-right mt-lg-5">
+                <table id="tbl" class="table table-hover">
+                    <thead>
+                        <tr>
+                            <td>Sl No.</td>
+                            <td>Categroy</td>
+                            <td>Action</td>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    <div class="modal fade" id="myModal" role="dialog">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Update category</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <input style="display: none" type="text" id="categoryIdNew" class="form-control" />
+                        <label for="categoryNameNew">Product Name:</label>
+                        <input type="text" class="form-control" id="categoryNameNew">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="btnUpdate" class="btn btn-success" data-dismiss="modal">Update</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<script src="~/Scripts/jquery-3.3.1.min.js"></script>
+<script src="~/Scripts/DataTables/jquery.dataTables.min.js"></script>
+
+
+<script>
+    // Get All Category
+    function getAllCategory() {
+        $.ajax({
+            type: "GET",
+            url: "/Category/GetAllCategory",
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            success: function (data) {
+                $.each(data, function (key, value) {
+                    $('#tbl tbody').append('<tr>' +
+                            '<td>' + (key + 1) + '</td>' +
+                            '<td>' + value.CategoryName + '</td>' +
+                            '<td><input type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal" value="Edit" onclick=editCategory("' + value.CategoryName + '","' + value.CategoryID + '")></td>' +
+                        '</tr>');
+                });
+                $('#tbl').DataTable();
+            }
+        });
+    }
+
+    function editCategory(name, id) {
+        $('#categoryIdNew').val(id);
+        $('#categoryNameNew').val(name);
+    }
+
+
+    $(document).ready(function () {
+
+        getAllCategory();
+        
+        $('#btn').click(function () {
+            var categoryName = $('#category').val();
+            if (categoryName === "") {
+                alert("Categroy name is empty");
+            } else {
+                var data = {
+                    CategoryName: categoryName
+                }
+                $.ajax({
+                    type: 'POST',
+                    url: '/Category/SaveCategory',
+                    data: JSON.stringify(data),
+                    contentType: 'application/json',
+                    success: function (data) {
+                        if (data > 0) {
+                            alert('Category save successfull');
+                            $('#category').val('');
+                            $('#tbl tbody').empty();
+                            getAllCategory();
+                        } else {
+                            alert('Categroy already exist');
+                            $('#category').val('');
+                        }
+                    },
+                    error: function (error) {
+                        alert(error);
+                        $('#category').val('');
+                    }
+                });
+            }
+        });
+
+        $('#btnUpdate').click(function() {
+            var catId = $('#categoryIdNew').val();
+            var catName = $('#categoryNameNew').val();
+            var data = {
+                CategoryId: catId,
+                CategoryName: catName
+            };
+            $.ajax({
+                type: 'POST',
+                url: '/Category/UpdateCategory',
+                data: JSON.stringify(data),
+                contentType: 'application/json',
+                success: function (data) {
+                    if (data > 0) {
+                        $('#tbl tbody').empty();
+                        getAllCategory();
+                    } else {
+                        alert('Category not updated');
+                    }
+                },
+                error: function (error) {
+                    alert(error);
+                }
+            });
+        });
+        
+    });
+    
+</script>
+
+<div>
+    @Html.ActionLink("Back to List", "Index")
+</div>
